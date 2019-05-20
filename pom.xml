@@ -11,6 +11,7 @@
     <modules>
         <module>gmall1128-common</module>
         <module>gmall1128-mock</module>
+        <module>gmall1128-logger</module>
     </modules>
 
     <parent>

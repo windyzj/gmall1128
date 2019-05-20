@@ -6,6 +6,7 @@
 		<artifactId>gmall1128-parent</artifactId>
 		<groupId>com.atguigu.gmall1128</groupId>
 		<version>1.0-SNAPSHOT</version>
+
 	</parent>
 	<groupId>com.atguigu.gmall1128</groupId>
 	<artifactId>gmall1128-logger</artifactId>
@@ -19,6 +20,12 @@
 	</properties>
 
 	<dependencies>
+
+		<dependency>
+			<groupId>com.atguigu.gmall1128</groupId>
+			<artifactId>gmall1128-common</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
@@ -38,6 +45,25 @@
 			<artifactId>spring-kafka-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-log4j</artifactId>
+			<version>1.3.8.RELEASE</version>
+		</dependency>
+
+
+
 	</dependencies>
 
 	<build>
