@@ -1,4 +1,4 @@
-package com.atguigu.gmall1128.logger.constant;
+package com.atguigu.gmall1128.common.constant;
 
 public class GmallConstant {
 
