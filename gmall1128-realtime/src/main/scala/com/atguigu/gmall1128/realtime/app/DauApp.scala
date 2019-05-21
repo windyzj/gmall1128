@@ -6,6 +6,7 @@ import java.util.Date
 
 import com.alibaba.fastjson.JSON
 import com.atguigu.gmall1128.common.constant.GmallConstant
+import com.atguigu.gmall1128.common.util.MyEsUtil
 import com.atguigu.gmall1128.realtime.bean.StartUpLog
 import com.atguigu.gmall1128.realtime.util.{MyKafkaUtil, RedisUtil}
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -95,9 +96,9 @@ object DauApp {
         for (startuplog <- startUpList ) {
           val key="dau:"+startuplog.logDate
           jedis.sadd(key,startuplog.mid)
-          // 保存es
-          println("保存到es:"+startuplog)
+
         }
+        MyEsUtil.insertBulk(GmallConstant.ES_INDEX_DAU,startUpList)
 
         jedis.close()
 
