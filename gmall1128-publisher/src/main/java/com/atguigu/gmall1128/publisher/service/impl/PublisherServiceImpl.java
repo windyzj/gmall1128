@@ -10,6 +10,7 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
+import org.elasticsearch.search.aggregations.metrics.sum.SumBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -85,5 +86,64 @@ public class PublisherServiceImpl implements PublisherService {
 
 
         return dauHourMap;
+    }
+
+    @Override
+    public Double getOrderAmount(String date) {
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        //过滤
+        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
+        boolQueryBuilder.filter(new TermQueryBuilder("createDate",date));
+        sourceBuilder.query(boolQueryBuilder);
+        //聚合
+        SumBuilder sumBuilder = AggregationBuilders.sum("sum_totalamount").field("totalAmount");
+        sourceBuilder.aggregation(sumBuilder);
+
+        Search search = new Search.Builder(sourceBuilder.toString()).addIndex(GmallConstant.ES_INDEX_ORDER).addType(GmallConstant.ES_DEFAULT_TYPE).build();
+        Double sum_totalamount=0D;
+        try {
+            SearchResult searchResult = jestClient.execute(search);
+              sum_totalamount = searchResult.getAggregations().getSumAggregation("sum_totalamount").getSum();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return sum_totalamount;
+    }
+
+
+
+
+
+    @Override
+    public Map getOrderAmountHoursMap(String date) {
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        //过滤
+        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
+        boolQueryBuilder.filter(new TermQueryBuilder("createDate",date));
+        sourceBuilder.query(boolQueryBuilder);
+        //聚合  把聚合操作嵌入分组操作中
+        SumBuilder sumBuilder = AggregationBuilders.sum("sum_totalamount").field("totalAmount");
+        TermsBuilder termsBuilder = AggregationBuilders.terms("groupby_createHour").field("createHour").size(24);
+        termsBuilder.subAggregation(sumBuilder);
+
+        sourceBuilder.aggregation(termsBuilder);
+
+        Search search = new Search.Builder(sourceBuilder.toString()).addIndex(GmallConstant.ES_INDEX_ORDER).addType(GmallConstant.ES_DEFAULT_TYPE).build();
+        Map<String ,Double> orderAmountHourMap=new HashMap<>();
+        try {
+            SearchResult searchResult = jestClient.execute(search);
+            List<TermsAggregation.Entry> buckets = searchResult.getAggregations().getTermsAggregation("groupby_createHour").getBuckets();
+            for (TermsAggregation.Entry bucket : buckets) {
+                Double sum_totalamount = bucket.getSumAggregation("sum_totalamount").getSum(); //归总值
+                orderAmountHourMap.put( bucket.getKey(), sum_totalamount);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return orderAmountHourMap;
     }
 }
