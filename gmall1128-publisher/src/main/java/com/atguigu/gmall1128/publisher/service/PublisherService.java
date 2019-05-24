@@ -1,5 +1,7 @@
 package com.atguigu.gmall1128.publisher.service;
 
+import com.atguigu.gmall1128.publisher.bean.SaleInfo;
+
 import java.util.Map;
 
 public interface PublisherService {
@@ -15,4 +17,7 @@ public interface PublisherService {
 
     // 查询单日分时收入
     public  Map getOrderAmountHoursMap(String date );
+
+    //用户灵活查询
+    public SaleInfo  getSaleInfo(String date,String keyword , int pageNo,int pagesize,String aggFieldName,int aggSize);
 }
