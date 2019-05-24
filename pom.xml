@@ -14,6 +14,7 @@
         <module>gmall1128-logger</module>
         <module>gmall1128-realtime</module>
         <module>gmall1128-canal</module>
+        <module>gmall1128-export-sale</module>
     </modules>
 
     <parent>

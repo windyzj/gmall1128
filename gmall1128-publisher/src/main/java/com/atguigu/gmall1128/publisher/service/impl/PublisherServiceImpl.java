@@ -1,16 +1,19 @@
 package com.atguigu.gmall1128.publisher.service.impl;
 
 import com.atguigu.gmall1128.common.constant.GmallConstant;
+import com.atguigu.gmall1128.publisher.bean.AggRangeOpt;
 import com.atguigu.gmall1128.publisher.bean.SaleInfo;
 import com.atguigu.gmall1128.publisher.service.PublisherService;
 import io.searchbox.client.JestClient;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
+import io.searchbox.core.search.aggregation.Range;
 import io.searchbox.core.search.aggregation.TermsAggregation;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MatchQueryBuilder;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.range.RangeBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
 import org.elasticsearch.search.aggregations.metrics.sum.SumBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -151,7 +154,7 @@ public class PublisherServiceImpl implements PublisherService {
     }
 
     @Override
-    public SaleInfo getSaleInfo(String date, String keyword, int pageNo, int pagesize, String aggFieldName, int aggSize) {
+    public SaleInfo getSaleInfo(String date, String keyword, int pageNo, int pagesize, String aggFieldName, int aggSize,List<AggRangeOpt> aggRangeList ) {
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         //过滤
@@ -161,14 +164,25 @@ public class PublisherServiceImpl implements PublisherService {
 
         sourceBuilder.query(boolQueryBuilder);
         //聚合
-        TermsBuilder termAggs = AggregationBuilders.terms("groupby_" + aggFieldName).field(aggFieldName).size(aggSize);
-        sourceBuilder.aggregation(termAggs);
+        if(aggRangeList==null||aggRangeList.size()==0){
+            TermsBuilder termAggs = AggregationBuilders.terms("groupby_" + aggFieldName).field(aggFieldName).size(aggSize);
+            sourceBuilder.aggregation(termAggs);
+        }else{
+            RangeBuilder rangeBuilder = AggregationBuilders.range("groupby_" + aggFieldName).field(aggFieldName);
+            for (AggRangeOpt aggRangeOpt : aggRangeList) {
+                rangeBuilder.addRange(aggRangeOpt.getKey(),aggRangeOpt.getFrom(),aggRangeOpt.getTo());
+            }
+            sourceBuilder.aggregation(rangeBuilder);
+        }
+
+
 
         //分页处理
         sourceBuilder.from((pageNo-1)*pagesize);
         sourceBuilder.size(pagesize);
 
         System.out.println(sourceBuilder.toString());
+
 
         Search search = new Search.Builder(sourceBuilder.toString()).addIndex(GmallConstant.ES_INDEX_SALE).addType(GmallConstant.ES_DEFAULT_TYPE).build();
 
@@ -183,9 +197,24 @@ public class PublisherServiceImpl implements PublisherService {
             for (SearchResult.Hit<HashMap, Void> hit : hits) {
                 detail.add(hit.source);
             }
-            List<TermsAggregation.Entry> buckets = searchResult.getAggregations().getTermsAggregation("groupby_" + aggFieldName).getBuckets();
-            for (TermsAggregation.Entry bucket : buckets) {
-                aggsMap.put(bucket.getKey(),bucket.getCount());
+            //聚合结果
+            if(aggRangeList==null||aggRangeList.size()==0) { //单值聚合
+                List<TermsAggregation.Entry> buckets = searchResult.getAggregations().getTermsAggregation("groupby_" + aggFieldName).getBuckets();
+                for (TermsAggregation.Entry bucket : buckets) {
+                    aggsMap.put(bucket.getKey(), bucket.getCount());
+                }
+            }else{ //分段聚合
+                List<Range> buckets = searchResult.getAggregations().getRangeAggregation("groupby_" + aggFieldName).getBuckets();
+                Map paramMap=new HashMap();
+                for (AggRangeOpt aggRangeOpt : aggRangeList) {
+                    paramMap.put(aggRangeOpt.getKey(),Map.class);
+                }
+
+                for (Range bucket : buckets) {
+                    bucket.getAggregations(paramMap);
+                    aggsMap.put( bucket.getName(),bucket.getCount());
+                }
+
             }
 
         } catch (IOException e) {
